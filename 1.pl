@@ -1,3 +1,4 @@
+/* Custom DateTime implementation */
 date_time(Year, Month, Date, Hour, Minute) :- Year > 0,Month >= 1,Month =< 12,Date >= 1,Date =< 31, Hour >= 1, Hour < 24, Minute >= 1, Minute < 60.
 
 later(Dt1, Dt2) :-
@@ -21,11 +22,13 @@ default_date_time(Dt) :-
     Date1 == 1,
     Hour1 == 1,
     Minute1 == 1.
-  
+
+/* Trains */
 train(1, 'Train1', lviv, kyiv, date_time(2018, 11, 10, 14, 0), date_time(2018, 11, 10, 22, 0)).
 train(2, 'Train2', kyiv, kharkiv, date_time(2018, 11, 11, 12, 0), date_time(2018, 11, 11, 15, 0)).
 train(3, 'Train3', kharkiv, chernigiv, date_time(2018, 11, 19, 13, 0), date_time(2018, 11, 12, 17, 0)).
 
+/* Carriages */
 hasCar(1, compartment, 52, 50, 14.00).
 hasCar(1, platzkart, 100, 75, 7.00).
 
