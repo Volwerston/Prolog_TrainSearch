@@ -1,5 +1,16 @@
+:- use_module(library(lists)).
+
 /* Custom DateTime implementation */
-date_time(Year, Month, Date, Hour, Minute) :- Year > 0,Month >= 1,Month =< 12,Date >= 1,Date =< 31, Hour >= 1, Hour < 24, Minute >= 1, Minute < 60.
+date_time(Year, Month, Date, Hour, Minute) :- 
+    Year > 0,
+    Month >= 1,
+    Month =< 12,
+    Date >= 1,
+    Date =< 31,
+    Hour >= 1,
+    Hour < 24, 
+    Minute >= 1, 
+    Minute < 60.
 
 later(Dt1, Dt2) :-
   Dt1 =.. List1,
@@ -24,29 +35,15 @@ default_date_time(Dt) :-
     Minute1 == 1.
 
 /* Trains */
-train(1, 'Train1', lviv, kyiv, date_time(2018, 11, 10, 14, 0), date_time(2018, 11, 10, 22, 0)).
-train(2, 'Train2', kyiv, kharkiv, date_time(2018, 11, 11, 12, 0), date_time(2018, 11, 11, 15, 0)).
-train(3, 'Train3', kharkiv, chernigiv, date_time(2018, 11, 19, 13, 0), date_time(2018, 11, 12, 17, 0)).
-train(4, 'Train4', kharkiv, sumy, date_time(2018, 11, 20, 12, 0), date_time(2018, 11, 20, 15, 30)).
-train(5, 'Train5', kharkiv, dnipro, date_time(2018, 11, 20, 17, 15), date_time(2018, 11, 21, 8, 45)).
-train(6, 'Train6', kyiv, mykolaiv, date_time(2018, 11, 21, 12, 30), date_time(2018, 11, 21, 17, 0)).
-train(7, 'Train7', mykolaiv, odesa, date_time(2018, 11, 21, 18, 30), date_time(2018, 11, 22, 3, 20)).
-train(8, 'Train8', odesa, chernivtsi, date_time(2018, 11, 22, 7, 0), date_time(2018, 11, 22, 12, 30)).
-train(9, 'Train9', kyiv, rivne, date_time(2018, 11, 23, 15, 40), date_time(2018, 11, 23, 23, 55)).
-train(10, 'Train10', kyiv, zhytomyr, date_time(2018, 11, 24, 11, 25), date_time(2018, 11, 24, 17, 5)).
-
-
-/* Carriages */
-hasCar(1, compartment, 52, 50, 14.00).
-hasCar(1, platzkart, 100, 75, 7.00).
-
-hasCar(2, compartment, 25, 0, 25.50).
-
-hasCar(3, platzcart, 300, 117, 14.45).
+train(1, 'Train1', lviv, kyiv, 
+    date_time(2018, 11, 10, 14, 0), date_time(2018, 11, 11, 7, 45), 
+    [sub_station(ternopil, date_time(2018, 11, 10, 16, 30), date_time(2018, 11, 10, 16, 45), [car(compartment, 15), car(platzkart, 5)]),
+     sub_station(vinnytsia, date_time(2018, 11, 10, 22, 45), date_time(2018, 11, 10, 23, 0), [car(compartment, 10), car(platzkart, 0)]),
+     sub_station(zhytomyr, date_time(2018, 11, 11, 3, 45), date_time(2018, 11, 11, 5, 30), [car(compartment, 25), car(platzkart, 5)])]).
 
 /* Print train info */
 printTrainInfo(Num) :- 
-    train(Num, Name, From, To, Departure, Arrival),
+    train(Num, Name, From, To, Departure, Arrival, Substations),
     write('[Number: '), 
     write(Num),
     write(' Name: '),
@@ -59,54 +56,81 @@ printTrainInfo(Num) :-
     write(Departure),
     write(', Arrival: '), 
     write(Arrival),
+    write(', '),
+    nl,
+    write('   Substations: '),
+    nl,
+    print_list(Substations),
     write(']'),
     nl.
 
-/* Print compartment info */
-printCarInfo(TrainNum, CarType, Places, FreePlaces, Price) :- 
-    write('[Train number: '),
-    write(TrainNum),
-    write(', Car type: '),
-    write(CarType),
-    write(', Overall places: '),
-    write(Places),
-    write(', Free places: '),
-    write(FreePlaces),
-    write(', Price: '),
-    write(Price),
-    write(']'),
-    nl.
+/* Print substations */
 
-/* Find train from station A to B */
-findCompositeRoute(X, Y) :- findRoute(X, Y, date_time(1, 1, 1, 1, 1)).
+print_list([]).
+print_list([Head|Tail]) :-
+    write(Head),
+    nl,
+    print_list(Tail).
 
-findRoute(Y, Y, AllowedDeparture).
-findRoute(X, Y, AllowedDeparture) :- 
-    train(Num, _, X, Z, Departure, Arrival),
-    (default_date_time(AllowedDeparture); later(Departure, AllowedDeparture)),
-    findRoute(Z, Y, Arrival),
-    printTrainInfo(Num).
+search_car(TrainNum, Location, Destination) :- 
+    train(TrainNum, Name, From, To, Departure, Arrival, Substations),
+    append([sub_station(From, default_date_time(1,1,1,1,1), default_date_time(1,1,1,1,1), [car(compartment,1), car(platzkart,1)])], Substations, Temp1),
+    append(Temp1, [sub_station(To, default_date_time(1,1,1,1,1), default_date_time(1,1,1,1,1), [car(compartment,1), car(platzkart,1)])], Temp2),
+    find_first_station(Temp2, Location, Destination).
 
-/* If contains car of type CarType */
-hasCar(TrainNum, CarType) :- 
-    hasCar(TrainNum, CarType, Places, FreePlaces, Price). 
+station_equal(First, Second) :-
+    First =.. Subitems,
+    [_,Station|_] = Subitems,
+    Second == Station.
 
-findCar(TrainNum, CarType) :-
-    hasCar(TrainNum, CarType, Places, FreePlaces, Price),
-    printCarInfo(TrainNum, CarType, Places, FreePlaces, Price).
+find_first_station([Head|Tail], Location, Destination) :-
+    (
+        station_equal(Head,Location) -> iterate_carriages(Head, Tail, Destination)
+    ;   find_first_station(Tail, Location, Destination)
+    ).
 
-/* If contains car with price lower than X */
-findPriceLowerThan(TrainNum, Price) :-
-    hasCar(TrainNum, CarType, Places, FreePlaces, X),
-    X < Price,
-    printCarInfo(TrainNum, CarType, Places, FreePlaces, X).
+check_place_count(Carriage, AllCarriages, NextStations, Destination) :- 
+    (
+        Carriage =.. Subitems,
+        [CN,_,Places|_] = Subitems,
+    write('Places: '), write(Places), write(' Carriage: '), write(CN), nl,
+        Places == 0 -> false
+        ; [A|B] = NextStations,
+        A =.. Sub2,
+        [_,NextStationName,_,_,Carriages|_] = Sub2,
+        iterate_carriages_inner(AllCarriages, NextStationName, B, Destination)
+        ).
+
+iterate_carriages_inner([], CurrStation, NextStations, Destination).
+iterate_carriages_inner([Head|Tail], StationName, NextStations, Destination) :-
+    write('-----'),
+    nl,
+    write(Head),
+    nl,
+    write(Tail),
+    nl,
+    write(StationName),
+    nl,
+    write(NextStations),
+    nl,
+    write(Destination),
+    nl,
+    write('-----'),
+    (
+        StationName == Destination -> write('Can travel in car: '), write(Head)
+    ;   append([Head], Tail, C), check_place_count(Head, C, NextStations, Destination)
+    ),
+            iterate_carriages_inner(Tail,StationName, NextStations, Destination).
     
-/* If contains route with 1 transfer */
 
-hasOneTransfer(X, Y) :- 
-    train(Num1, _, X, Z, _, Arrival1),
-    train(Num2, _, Z, Y, Departure2, _),
-    later(Departure2, Arrival1),
-    printTrainInfo(Num1),
-    printTrainInfo(Num2).
+iterate_carriages(Head, Tail, Destination) :-
+    Head =.. Subitems,
+    [_,StationName,_,_,Carriages|_] = Subitems,
+    write('CARRIAGES: '),
+    write(Carriages),
+    nl,
+    iterate_carriages_inner(Carriages,StationName,Tail,Destination),
+    nl.
+    
+    
 
